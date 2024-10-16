@@ -249,6 +249,31 @@ int notHas_lookahead(LexerDFA *lexer){
      return 0;
 }
 
+int input_lookahead(LexerDFA *lexer){
+    if( (lexer->position + 7) > lexer->length ){
+        return 0;
+    }
+
+    char cur = lexer->current_char;
+    char n1 = lexer->input_string[lexer->position + 1];
+    char n2 = lexer->input_string[lexer->position + 2];
+    char n3 = lexer->input_string[lexer->position + 3];
+    char n4 = lexer->input_string[lexer->position + 4];
+    char n5 = lexer->input_string[lexer->position + 5];
+      
+    if(cur == 'i' && 
+        n1 == 'n' && 
+        n2 == 'p' &&
+        n3 == 'u' && 
+        n4 == 't' &&
+        !isalnum(n5) 
+    )
+     {
+        return 1;
+     }
+     return 0;
+}
+
 int updateExits_lookahead(LexerDFA *lexer){
 
     //position = 10
@@ -409,7 +434,14 @@ void run(LexerDFA *lexer) {
             advance(lexer);
             advance(lexer);
             advance(lexer);
-        }else if (isalpha(lexer->current_char)) {
+        }else if (input_lookahead(lexer)) {
+            add_token(lexer, "INPUT", "input");
+            advance(lexer);
+            advance(lexer);
+            advance(lexer);
+            advance(lexer);
+            advance(lexer);
+        } else if (isalpha(lexer->current_char)) {
             Token id = identifier(lexer);
             add_token(lexer, id.type, id.value);
         }  else {
