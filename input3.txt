@@ -1,0 +1,9 @@
+ROOM roomA { 
+  story "you are in room A. You can enter room B or room C" 
+  exits { roomB  }
+}
+
+ROOM roomB { 
+  story "you are in room B. This is the end." 
+  exits { END }
+}

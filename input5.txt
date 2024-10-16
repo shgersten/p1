@@ -1,0 +1,30 @@
+ROOM roomA { 
+  story "you are in room A. You can enter room B or room C" 
+  exits { roomB roomC }
+}
+
+ROOM roomB { 
+  story "you are in room B. This is a deadend." 
+  exits { roomA }
+}
+
+ROOM roomC { 
+  story "you are in room C. You can enter room D."
+  exits { roomD }
+}
+  
+ ROOM roomD { 
+  story "you are in room D. You have completed the maze!"
+  exits { END }
+} 
+
+ROOM Player {
+    ROOM currentRoom
+}
+
+ 
+  		while exits notHas "END" {
+            input{selection}
+
+			updateExits{ Player.currentRoom "selection" }  
+        } &&&&
