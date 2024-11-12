@@ -1,189 +1,140 @@
-Scanner Assignment:
+Scanner Assignment 2:
 
 UNI: srg2178
 
-Lexical Alphabet: [a-zA-Z0-9".{}]
+Lexical Alphabet: [a-zA-Z0-9"{}]
 
-Keywords:
-- ROOM [a-zA-Z]+
-- - String literal ["][a-zA-Z0-9]*["]
-- while 
-- exits
-- story
-- END
-- updateExits
-- input
+Grammar:
+
+Program -> RoomDeclarations startingItems { Items }
+
+RoomDeclarations -> epsilon | RoomDeclaration RoomDeclarations
+
+RoomDeclaration -> ROOM id { story "STRING" items { Items } exits { ExitOptions } }
+
+Items-> epsilon | id Items
+
+ExitOptions -> epsilon | id ExitOptions
+
+Terminals:
+ROOM
+id
+{
+}
+story
+STRING
+exits
+epsilon
+
+Non Terminals:
+1) Program
+2) RoomDeclarations
+3) RoomDeclaration
+4) Items
+5) ExitOptions
+
+Expected Output:
+
+****************************
+Processing input file: input1.txt
+****************************
+
+Program:
+        roomDec:
+                roomID: roomA
+                STORY: "you are in room A. You can enter room B"
+                roomItems: itemA itemB 
+                exits: roomB 
+
+        roomDec:
+                roomID: roomB
+                STORY: "you are in room B. You can enter room E"
+                roomItems: itemC itemD 
+                exits: roomE 
+
+        roomDec:
+                roomID: roomE
+                STORY: "you are in room E. You can enter room Z"
+                roomItems: itemC itemD 
+                exits: roomZ 
+
+        Starting Items: itemD itemG 
 
 
-Operators:
-- notHas
-- .
-- "
-- {
-- }
+----------------------------
+****************************
+Processing input file: input2.txt
+****************************
+Failed to create a Room Declaration. Incomplete/Missing variables
+A Room must have story, items, exits and there must be a 'startingItems' array
+failed at parse_RoomDeclarations 
+failed at point program_parse
+Parsing failed. Follow preceding fail statements to track it down.
+----------------------------
+****************************
+Processing input file: input3.txt
+****************************
 
-Sample Input Programs Expected Output: (sample errors are in in input4.txt and input5.txt)
+Program:
+        roomDec:
+                roomID: roomA
+                STORY: "you are in room A. You can enter room B"
+                roomItems: itemA itemB 
+                exits: roomB 
 
-************
-input1.txt
-------------------
-<ROOM, room>
-<IDENTIFIER, roomA>
-<LBRACE, {>
-<STORY, story>
-<STRING, "you are in room A. You can enter room B or room C">
-<EXITS, exits>
-<LBRACE, {>
-<IDENTIFIER, roomB>
-<IDENTIFIER, roomC>
-<RBRACE, }>
-<RBRACE, }>
-<ROOM, room>
-<IDENTIFIER, roomB>
-<LBRACE, {>
-<STORY, story>
-<STRING, "you are in room B. This is a deadend.">
-<EXITS, exits>
-<LBRACE, {>
-<IDENTIFIER, roomA>
-<RBRACE, }>
-<RBRACE, }>
-<ROOM, room>
-<IDENTIFIER, roomC>
-<LBRACE, {>
-<STORY, story>
-<STRING, "you are in room C. You can enter room D.">
-<EXITS, exits>
-<LBRACE, {>
-<IDENTIFIER, roomD>
-<RBRACE, }>
-<RBRACE, }>
-<ROOM, room>
-<IDENTIFIER, roomD>
-<LBRACE, {>
-<STORY, story>
-<STRING, "you are in room D. You have completed the maze!">
-<EXITS, exits>
-<LBRACE, {>
-<END, END>
-<RBRACE, }>
-<RBRACE, }>
-<ROOM, room>
-<IDENTIFIER, Player>
-<LBRACE, {>
-<ROOM, room>
-<IDENTIFIER, currentRoom>
-<RBRACE, }>
-<WHILE, while>
-<EXITS, exits>
-<NOTHAS, notHas>
-<STRING, "END">
-<LBRACE, {>
-<INPUT, input>
-<LBRACE, {>
-<IDENTIFIER, selection>
-<RBRACE, }>
-<UPDATEEXITS, updateExits>
-<LBRACE, {>
-<IDENTIFIER, Player>
-<DOT, .>
-<IDENTIFIER, currentRoom>
-<STRING, "selection">
-<RBRACE, }>
-<RBRACE, }>
-*************
+        roomDec:
+                roomID: roomB
+                STORY: "you are in room B. You have finished the maze"
+                roomItems: itemC itemD 
+                exits: 
 
-************
-input2.txt
----------------
-<ROOM, room>
-<IDENTIFIER, roomA>
-<LBRACE, {>
-<STORY, story>
-<STRING, "you are in the only room">
-<EXITS, exits>
-<LBRACE, {>
-<END, END>
-<RBRACE, }>
-<RBRACE, }>
-<WHILE, while>
-<EXITS, exits>
-<NOTHAS, notHas>
-<STRING, "END">
-<LBRACE, {>
-<INPUT, input>
-<LBRACE, {>
-<IDENTIFIER, selection>
-<RBRACE, }>
-<UPDATEEXITS, updateExits>
-<LBRACE, {>
-<IDENTIFIER, Player>
-<DOT, .>
-<IDENTIFIER, currentRoom>
-<STRING, "selection">
-<RBRACE, }>
-<RBRACE, }>
-<ROOM, room>
-<IDENTIFIER, Player>
-<LBRACE, {>
-<ROOM, room>
-<IDENTIFIER, currentRoom>
-<RBRACE, }>
-<WHILE, while>
-<EXITS, exits>
-<NOTHAS, notHas>
-<STRING, "END">
-<LBRACE, {>
-<INPUT, input>
-<LBRACE, {>
-<IDENTIFIER, selection>
-<RBRACE, }>
-<UPDATEEXITS, updateExits>
-<LBRACE, {>
-<IDENTIFIER, Player>
-<DOT, .>
-<IDENTIFIER, currentRoom>
-<STRING, "selection">
-<RBRACE, }>
-<RBRACE, }>
-*************
+        Starting Items: itemD itemG 
 
-************
-input3.txt
------------------
-<ROOM, room>
-<IDENTIFIER, roomA>
-<LBRACE, {>
-<STORY, story>
-<STRING, "you are in room A. You can enter room B or room C">
-<EXITS, exits>
-<LBRACE, {>
-<IDENTIFIER, roomB>
-<RBRACE, }>
-<RBRACE, }>
-<ROOM, room>
-<IDENTIFIER, roomB>
-<LBRACE, {>
-<STORY, story>
-<STRING, "you are in room B. This is the end.">
-<EXITS, exits>
-<LBRACE, {>
-<END, END>
-<RBRACE, }>
-<RBRACE, }>
-*************
 
-************
-input4.txt
-----------------
-Error: Unterminated string literal
-*************
+----------------------------
+****************************
+Processing input file: input4.txt
+****************************
+Failed to create a Room Declaration. Incomplete/Missing variables
+A Room must have story, items, exits and there must be a 'startingItems' array
+failed at parse_RoomDeclarations 
+failed at parse_RoomDeclarations 
+failed at point program_parse
+Parsing failed. Follow preceding fail statements to track it down.
+----------------------------
+****************************
+Processing input file: input5.txt
+****************************
 
-************
-input5.txt
------------------
-Unexpected character: &
-*************
+Program:
+        roomDec:
+                roomID: roomA
+                STORY: "you are in room A. You can enter room B or room C"
+                roomItems: itemA itemB 
+                exits: roomB roomC 
+
+        roomDec:
+                roomID: roomB
+                STORY: "you are in room B. You can go to room C."
+                roomItems: itemA itemB 
+                exits: roomC 
+
+        roomDec:
+                roomID: roomC
+                STORY: "you are in room C. You can enter room D."
+                roomItems: itemA itemB 
+                exits: roomD 
+
+        roomDec:
+                roomID: roomD
+                STORY: "you are in room D. You have completed the maze!"
+                roomItems: itemA itemB 
+                exits: 
+
+        Starting Items: itemD itemG 
+
+
+----------------------------
 
 Installation Steps:
 Install gcc and bash: apt-get update && apt-get install -y gcc bash
