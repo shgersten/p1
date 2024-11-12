@@ -3,10 +3,47 @@
 #include <ctype.h>
 #include <string.h>
 
+#define ROOM_ID_LENGTH     256
+#define DESCRIPTION_LENGTH 1024
+
+/*
+Program -> RoomDeclarations startingItems { Items }
+
+RoomDeclarations -> epsilon | RoomDeclaration RoomDeclarations
+
+RoomDeclaration -> ROOM id { story "STRING" items { Items } exits { ExitOptions } }
+
+Items-> epsilon | id Items
+
+ExitOptions -> epsilon | id ExitOptions
+
+Terminals:
+ROOM
+id
+{
+}
+story
+STRING
+exits
+epsilon
+*/
+
+enum TokenType{
+    IDENTIFIER,
+    ROOM,
+    STRING,
+    LBRACE, 
+    RBRACE, 
+    EXITS, 
+    ITEMS, 
+    STORY, 
+    END, 
+    STARTINGITEMS 
+};
 
 // token struct: will need to print in the form <TYPE, VALUE>
 typedef struct {
-    char *type;
+    enum TokenType type;
     char *value;
 } Token;
 
@@ -31,17 +68,457 @@ typedef struct {
 } LexerDFA;
 
 
+char *toString(enum TokenType t);
 
-Token create_token(char *type, char *value) {
+struct Program;
+void print_Program(struct Program *);
+
+struct RoomDeclarations;
+void print_RoomDeclarations(struct RoomDeclarations *);
+
+struct RoomDeclaration;
+void print_RoomDeclaration(struct RoomDeclaration *);
+
+struct ExitOptions;
+void print_ExitOptions(struct ExitOptions *);
+
+struct Items_parse_result;
+struct Items;
+void print_Items(struct Items *items);
+
+struct Program_parse_result program_parse(Token *tokens, int num_tokens, int cur);
+struct RoomDeclaration_parse_result parse_RoomDeclaration(Token * tokens, int num_tokens, int cur);
+struct RoomDeclarations_parse_result parse_RoomDeclarations(Token * tokens, int num_tokens, int cur);
+struct ExitOptions_parse_result parse_ExitOptions(Token *tokens, int num_tokens, int cur);
+
+struct Items_parse_result parse_Items(Token *tokens, int num_tokens, int cur);
+struct ExitOptions_parse_result;
+struct RoomDeclaration_parse_result;
+struct Program_parse_result;
+
+struct Program {
+    struct RoomDeclarations *roomDeclarations;
+    struct Items *starting_items;
+};
+
+                //0   1
+enum Result {SUCCESS, FAIL};
+
+char * result_toString(enum Result r){
+    if(r == SUCCESS)
+    {return "SUCCESS";}
+
+   
+    return "FAIL";
+
+}
+
+struct ExitOptions_parse_result{
+    enum Result result;
+    struct ExitOptions *exitOptions;
+    int tokens_consumed;
+};
+
+struct Items_parse_result {
+    enum Result result;
+    struct Items *items;
+    int tokens_consumed;
+
+};
+
+struct Items {
+    enum { EMPTY_ITEMS, NONEMPTY_ITEMS } kind;
+    char *firstItemID;
+    struct Items *rest;
+};
+
+
+struct RoomDeclarations {
+    enum { EMPTY_DECLS, NONEMPTY_DECLS } kind;
+    struct RoomDeclaration * first;
+    struct RoomDeclarations * rest;
+};
+
+struct RoomDeclaration {
+    char* roomId;
+    char* description;
+    struct Items *items;
+    struct ExitOptions *exitOptions;
+};
+
+struct ExitOptions {
+    enum { EMPTY_OPTS, NONEMPTY_OPTS } kind;
+    char *firstRoomId;
+    struct ExitOptions * rest;
+};
+
+struct RoomDeclaration_parse_result {
+    enum Result result;
+    struct RoomDeclaration *roomDeclaration;
+    int tokens_consumed;
+};
+
+struct RoomDeclarations_parse_result {
+    enum Result result;
+    struct RoomDeclarations *roomDeclarations;
+    int tokens_consumed;
+};
+
+struct Program_parse_result{
+    enum Result result;
+    struct Program *program;
+    int tokens_consumed;
+};
+
+struct Program_parse_result program_parse(Token *tokens, int num_tokens, int cur) 
+{
+    //Program -> RoomDeclarations startingItems { Items }
+
+    struct RoomDeclarations_parse_result room_result;
+    struct Items_parse_result st_items_result;
+    room_result = parse_RoomDeclarations(tokens, num_tokens, cur);
+
+    if(room_result.result == SUCCESS && 
+        tokens[room_result.tokens_consumed].type == STARTINGITEMS &&
+        tokens[room_result.tokens_consumed + 1].type == LBRACE ){
+        
+        st_items_result = parse_Items(tokens, num_tokens, room_result.tokens_consumed + 2);
+
+        if(st_items_result.result == SUCCESS &&
+            tokens[room_result.tokens_consumed + 2 + st_items_result.tokens_consumed].type == RBRACE){
+
+
+
+            struct Program *p = malloc(sizeof(struct Program));
+            p->roomDeclarations = room_result.roomDeclarations;
+            p->starting_items = st_items_result.items;
+            struct Program_parse_result p_res;
+            p_res.result = SUCCESS;
+            p_res.program = p;
+            p_res.tokens_consumed = room_result.tokens_consumed + 2 + st_items_result.tokens_consumed + 1;
+        return p_res;
+    }
+        }
+    struct Program_parse_result fail;
+    fail.result = FAIL;
+    printf("failed at point program_parse\n");
+    return fail;
+}
+
+void print_Program(struct Program *program) {
+    printf("\nProgram:\n");
+    print_RoomDeclarations(program->roomDeclarations);
+    printf("\tStarting Items: "); print_Items(program->starting_items); printf("\n");
+    printf("\n\n");
+}
+
+/*
+program:
+    roomDec
+        story
+        items
+        exits
+    roomDec
+        story
+        items
+        exits
+    startingItems
+        items
+
+*/
+
+
+void print_RoomDeclarations(struct RoomDeclarations *roomDeclarations) {
+    switch (roomDeclarations->kind) {
+        case EMPTY_DECLS:
+            break;
+
+        case NONEMPTY_DECLS:
+            print_RoomDeclaration(roomDeclarations->first);
+            printf("\n");
+            print_RoomDeclarations(roomDeclarations->rest);
+            break;
+    }
+}
+
+void print_RoomDeclaration(struct RoomDeclaration *roomDeclaration) {
+    printf("\troomDec:\n");
+    printf("\t\troomID: %s\n", roomDeclaration->roomId);
+    printf("\t\tSTORY: %s\n", roomDeclaration->description);
+    printf("\t\troomItems: "); print_Items(roomDeclaration->items); printf("\n");
+    printf("\t\texits: "); print_ExitOptions(roomDeclaration->exitOptions); printf("\n");
+
+}
+
+void print_ExitOptions(struct ExitOptions *exitOptions) {
+    switch (exitOptions->kind) {
+        case EMPTY_OPTS:
+            break;
+
+        case NONEMPTY_OPTS:
+            printf("%s ", exitOptions->firstRoomId);
+            print_ExitOptions(exitOptions->rest);
+            break;
+    }
+}
+
+void print_Items(struct Items *items) {
+    switch (items->kind) {
+        case EMPTY_ITEMS:
+            break;
+
+        case NONEMPTY_ITEMS:
+            printf("%s ", items->firstItemID);
+            print_Items(items->rest);
+            break;
+    }
+}
+
+
+
+
+
+
+Token create_token(enum TokenType type, char *value) {
     Token token;
     token.type = type;
     token.value = value;
     return token;
 }
 
+struct RoomDeclaration_parse_result parse_RoomDeclaration(Token * tokens, int num_tokens, int cur) {
+
+    if (
+        //function to check if:    ROOM id { story string exits { ExitOptions } }
+
+        num_tokens >= cur + 6 &&
+
+        tokens[cur + 0].type == ROOM &&
+        tokens[cur + 1].type == IDENTIFIER &&
+        tokens[cur + 2].type == LBRACE &&
+        tokens[cur + 3].type == STORY &&
+        tokens[cur + 4].type == STRING &&
+        tokens[cur + 5].type == ITEMS &&
+        tokens[cur + 6].type == LBRACE
+    ) 
+    //parsing items
+   // items success
+   {
+    struct Items_parse_result items_res = parse_Items(tokens, num_tokens, cur + 7);
+    //SUCCESS - it has items
+        //RBRACE at end of items
+       
+          if (
+            items_res.result == SUCCESS &&
+
+            (cur + 7 + items_res.tokens_consumed + 1 <= num_tokens) &&
+
+            ((tokens[cur + 6 + items_res.tokens_consumed + 1].type) == RBRACE) &&
+            ((tokens[cur + 6 + items_res.tokens_consumed + 2].type) == EXITS) &&
+            ((tokens[cur + 6 + items_res.tokens_consumed + 3].type) == LBRACE) )  {
+
+         
+            struct ExitOptions_parse_result parse_res = parse_ExitOptions(tokens, num_tokens, cur + 7 + items_res.tokens_consumed + 3);
+
+            if( parse_res.result == SUCCESS && 
+                 tokens[cur + 6 + items_res.tokens_consumed + 3 + parse_res.tokens_consumed + 1].type == RBRACE && 
+                 tokens[cur + 6 + items_res.tokens_consumed + 3 + parse_res.tokens_consumed + 2].type == RBRACE )
+            {
+                //SUCCESS - it has exit options
+                //RBRACE at end of ExitOptions
+               
+
+            struct RoomDeclaration * r = malloc(sizeof(struct RoomDeclaration));
+            r -> roomId = tokens[cur + 1].value;
+            r -> description = tokens[cur + 4].value;
+            r->items = items_res.items;
+            r -> exitOptions = parse_res.exitOptions;
 
 
-void add_token(LexerDFA *lexer, char *type, char *value) {
+            struct RoomDeclaration_parse_result result;
+            result.result = SUCCESS;
+            result.roomDeclaration = r; 
+            result.tokens_consumed = 7 + items_res.tokens_consumed + 3 + parse_res.tokens_consumed + 2;
+
+            return result;
+            } 
+            
+        }
+
+   }
+    struct RoomDeclaration_parse_result err;
+    err.roomDeclaration = NULL;
+    err.result = FAIL;
+    err.tokens_consumed = 0;
+    printf("Failed to create a Room Declaration. Incomplete/Missing variables\nA Room must have story, items, exits and there must be a 'startingItems' array\n");
+    return err;
+    
+} //end function
+
+//plural
+struct RoomDeclarations_parse_result parse_RoomDeclarations(Token * tokens, int num_tokens, int cur) {
+    //finished parsing
+    if( tokens[cur].type == STARTINGITEMS)  //no rooms left in the program to parse
+    {
+        struct RoomDeclarations *room_dec = malloc(sizeof(struct RoomDeclarations));
+        room_dec->kind = EMPTY_DECLS;
+
+        struct RoomDeclarations_parse_result result;
+        result.result = SUCCESS;
+        result.roomDeclarations = room_dec;
+        result.tokens_consumed = 0;
+        return result;
+    }
+    //nonempty, tokens to consume
+    //roomDeclarations to parse so first parse singluar then plural
+
+    //parse one room
+    struct RoomDeclaration_parse_result room_parse = parse_RoomDeclaration(tokens, num_tokens, cur);
+    if(room_parse.result == SUCCESS){
+    
+        struct RoomDeclarations_parse_result rest_result = parse_RoomDeclarations(tokens, num_tokens, cur + room_parse.tokens_consumed);
+        if(rest_result.result == SUCCESS){
+            
+            struct RoomDeclarations *room_dec = malloc(sizeof(struct RoomDeclarations));
+            room_dec->kind = NONEMPTY_DECLS;
+            room_dec->first = room_parse.roomDeclaration;
+            room_dec->rest = rest_result.roomDeclarations;
+            
+            struct RoomDeclarations_parse_result result;
+            result.result = SUCCESS;
+            result.roomDeclarations = room_dec;
+                                        //first                     //all the rest unknown amount
+            result.tokens_consumed = room_parse.tokens_consumed + rest_result.tokens_consumed ;
+            return result;        
+        }
+
+    }
+
+    struct RoomDeclarations_parse_result fail;
+    fail.result = FAIL;
+    printf("failed at parse_RoomDeclarations \n");
+    return fail;
+} //end function
+
+struct ExitOptions_parse_result parse_ExitOptions(Token *tokens, int num_tokens, int cur){
+    
+    //no token to get
+
+
+    if(cur >= num_tokens){
+        struct ExitOptions_parse_result err;
+        err.exitOptions = NULL;
+        err.result = FAIL;
+        err.tokens_consumed = 0;
+        printf("failed - no tokens to get in parse_ExitOptions\n");
+        return err;
+    }
+
+    Token cur_token = tokens[cur];
+    if(cur_token.type == RBRACE)
+    {
+        //printf("Reached an 'R brace'.\nThere are no exit options\nExiting this iteration of parse_ExitOptions...\n\n");
+        //ending of exit options - empty
+        struct ExitOptions *e = malloc(sizeof(struct ExitOptions));
+        e->kind = EMPTY_OPTS; 
+        struct ExitOptions_parse_result res;
+        res.exitOptions = e;
+        res.tokens_consumed = 0;
+        res.result = SUCCESS;
+
+        return res;   
+    }
+    
+    // case where there are exit options
+    if(cur_token.type == IDENTIFIER){
+        //{ roomA roomB ...}
+
+        struct ExitOptions *e = malloc(sizeof(struct ExitOptions));
+        e->firstRoomId = cur_token.value;
+        e->kind = NONEMPTY_OPTS;
+        struct ExitOptions_parse_result r =  parse_ExitOptions(tokens, num_tokens, cur+1);
+        if(r.result == SUCCESS)
+        {
+            e->rest = r.exitOptions;
+            struct ExitOptions_parse_result res_par;
+            res_par.exitOptions = e;
+            res_par.result = SUCCESS;
+            res_par.tokens_consumed = 1 + r.tokens_consumed; //potential off by one
+            return res_par;
+        }
+    }
+
+    //if not exit options, the catch all
+    //parse error
+    struct ExitOptions_parse_result parse_else;
+    parse_else.exitOptions = NULL;
+    parse_else.result = FAIL;
+    parse_else.tokens_consumed = 0;
+    printf("unexpected token: %s\n", toString(cur_token.type));
+    return parse_else;
+}
+
+
+
+struct Items_parse_result parse_Items(Token *tokens, int num_tokens, int cur){
+    
+    //no token to get
+
+    if(cur >= num_tokens){
+        struct Items_parse_result err;
+        err.items = NULL;
+        err.result = FAIL;
+        err.tokens_consumed = 0;
+        printf("failed - no tokens to get in parse_ExitOptions\n");
+        return err;
+    }
+
+    Token cur_token = tokens[cur];
+    if(cur_token.type == RBRACE)
+    {
+        //printf("Reached an 'R brace'.\nThere are no items \nExiting this iteration of parse_Items...\n\n");
+        //ending of exit options - empty
+        struct Items *e = malloc(sizeof(struct Items));
+        e->kind = EMPTY_OPTS; 
+        struct Items_parse_result res;
+        res.items = e;
+        res.tokens_consumed = 0;
+        res.result = SUCCESS;
+
+        return res;   
+    }
+    
+    // case where there are exit options
+    if(cur_token.type == IDENTIFIER){
+        //{ itemA itemB ...}
+
+        struct Items *e = malloc(sizeof(struct Items));
+        e->firstItemID = cur_token.value;
+        e->kind = NONEMPTY_ITEMS;
+        struct Items_parse_result r =  parse_Items(tokens, num_tokens, cur+1);
+        if(r.result == SUCCESS)
+        {
+            e->rest = r.items;
+            struct Items_parse_result res_par;
+            res_par.items = e;
+            res_par.result = SUCCESS;
+            res_par.tokens_consumed = 1 + r.tokens_consumed; //potential off by one
+            return res_par;
+        }
+    }
+
+    //if not exit options, the catch all
+    //parse error
+    struct Items_parse_result parse_else;
+    parse_else.items = NULL;
+    parse_else.result = FAIL;
+    parse_else.tokens_consumed = 0;
+    printf("unexpected token: %s\n", toString(cur_token.type));
+    return parse_else;
+}
+
+
+void add_token(LexerDFA *lexer, enum TokenType type, char *value) {
     
     //resize the amount of tokens the lexer can keep track of if reached capacity
     if (lexer->token_count >= lexer->token_capacity) {
@@ -80,7 +557,7 @@ Token identifier(LexerDFA *lexer){
 
     }
     Token result; 
-    result.type = "IDENTIFIER";
+    result.type = IDENTIFIER;
     result.value = var_name;
     return result;
 }
@@ -139,11 +616,12 @@ int room_lookahead(LexerDFA *lexer){
      return 0;
 }
 
-int while_lookahead(LexerDFA *lexer){
+
+int items_lookahead(LexerDFA *lexer){
 
     //position = 10
     //length = 11
-    if( (lexer->position + 6) > lexer->length ){
+    if( (lexer->position + 5) > lexer->length ){
         return 0;
     }
 
@@ -153,13 +631,56 @@ int while_lookahead(LexerDFA *lexer){
     char n3 = lexer->input_string[lexer->position + 3];
     char n4 = lexer->input_string[lexer->position + 4];
     char n5 = lexer->input_string[lexer->position + 5];
-    
-    if(cur == 'w' && 
-        n1 == 'h' && 
-        n2 == 'i' && 
-        n3 == 'l' && 
-        n4 == 'e' &&
+
+    if(cur == 'i' && 
+        n1 == 't' && 
+        n2 == 'e' && 
+        n3 == 'm' && 
+        n4 == 's' && 
         !isalnum(n5) 
+    )
+     {
+        return 1;
+     }
+     return 0;
+}
+int startingItems_lookahead(LexerDFA *lexer){
+
+    //position = 10
+    //length = 11
+    if( (lexer->position + 13) > lexer->length ){
+        return 0;
+    }
+
+    char cur = lexer->current_char;
+    char n1 = lexer->input_string[lexer->position + 1];
+    char n2 = lexer->input_string[lexer->position + 2];
+    char n3 = lexer->input_string[lexer->position + 3];
+    char n4 = lexer->input_string[lexer->position + 4];
+    char n5 = lexer->input_string[lexer->position + 5];
+    char n6 = lexer->input_string[lexer->position + 6];
+    char n7 = lexer->input_string[lexer->position + 7];
+    char n8 = lexer->input_string[lexer->position + 8];
+    char n9 = lexer->input_string[lexer->position + 9];
+    char n10 = lexer->input_string[lexer->position + 10];
+    char n11 = lexer->input_string[lexer->position + 11];
+    char n12 = lexer->input_string[lexer->position + 12];
+    char n13 = lexer->input_string[lexer->position + 13];
+
+    if(cur == 's' && 
+        n1 == 't' && 
+        n2 == 'a' && 
+        n3 == 'r' && 
+        n4 == 't' && 
+        n5 == 'i' && 
+        n6 == 'n' && 
+        n7 == 'g' && 
+        n8 == 'I' && 
+        n9 == 't' && 
+        n10 == 'e' && 
+        n11 == 'm' && 
+        n12 == 's' && 
+        !isalnum(n13) 
     )
      {
         return 1;
@@ -219,100 +740,7 @@ int END_lookahead(LexerDFA *lexer){
      return 0;
 }
 
-int notHas_lookahead(LexerDFA *lexer){
 
-    //position = 10
-    //length = 11
-    if( (lexer->position + 7) > lexer->length ){
-        return 0;
-    }
-
-    char cur = lexer->current_char;
-    char n1 = lexer->input_string[lexer->position + 1];
-    char n2 = lexer->input_string[lexer->position + 2];
-    char n3 = lexer->input_string[lexer->position + 3];
-    char n4 = lexer->input_string[lexer->position + 4];
-    char n5 = lexer->input_string[lexer->position + 5];
-    char n6 = lexer->input_string[lexer->position + 6];
-      
-    if(cur == 'n' && 
-        n1 == 'o' && 
-        n2 == 't' &&
-        n3 == 'H' && 
-        n4 == 'a' &&
-        n5 == 's' && 
-        !isalnum(n6) 
-    )
-     {
-        return 1;
-     }
-     return 0;
-}
-
-int input_lookahead(LexerDFA *lexer){
-    if( (lexer->position + 7) > lexer->length ){
-        return 0;
-    }
-
-    char cur = lexer->current_char;
-    char n1 = lexer->input_string[lexer->position + 1];
-    char n2 = lexer->input_string[lexer->position + 2];
-    char n3 = lexer->input_string[lexer->position + 3];
-    char n4 = lexer->input_string[lexer->position + 4];
-    char n5 = lexer->input_string[lexer->position + 5];
-      
-    if(cur == 'i' && 
-        n1 == 'n' && 
-        n2 == 'p' &&
-        n3 == 'u' && 
-        n4 == 't' &&
-        !isalnum(n5) 
-    )
-     {
-        return 1;
-     }
-     return 0;
-}
-
-int updateExits_lookahead(LexerDFA *lexer){
-
-    //position = 10
-    //length = 11
-    if( (lexer->position + 12) > lexer->length ){
-        return 0;
-    }
-
-    char cur = lexer->current_char;
-    char n1 = lexer->input_string[lexer->position + 1];
-    char n2 = lexer->input_string[lexer->position + 2];
-    char n3 = lexer->input_string[lexer->position + 3];
-    char n4 = lexer->input_string[lexer->position + 4];
-    char n5 = lexer->input_string[lexer->position + 5];
-    char n6 = lexer->input_string[lexer->position + 6];
-    char n7 = lexer->input_string[lexer->position + 7];
-    char n8 = lexer->input_string[lexer->position + 8];
-    char n9 = lexer->input_string[lexer->position + 9];
-    char n10 = lexer->input_string[lexer->position + 10];
-    char n11 = lexer->input_string[lexer->position + 11];
-    
-    if(cur == 'u' && 
-        n1 == 'p' && 
-        n2 == 'd' && 
-        n3 == 'a' && 
-        n4 == 't' &&
-        n5 == 'e' && 
-        n6 == 'E' && 
-        n7 == 'x' &&
-        n8 == 'i' && 
-        n9 == 't' && 
-        n10 == 's' &&
-        !isalnum(n11)  
-    )
-     {
-        return 1;
-     }
-     return 0;
-}
 
 Token string_lookahead(LexerDFA *lexer){
 
@@ -360,7 +788,7 @@ Token string_lookahead(LexerDFA *lexer){
     str_value[index] = '\0';  // Null-terminate the string
 
     // Create and return the token with type STRING and the captured value.
-    return create_token("STRING", str_value);
+    return create_token(STRING, str_value);
 }
 
 void run(LexerDFA *lexer) {
@@ -368,64 +796,51 @@ void run(LexerDFA *lexer) {
         if (isspace(lexer->current_char)) {
             advance(lexer);  // Ignore whitespace
         }  else if (lexer->current_char == '{') {
-            add_token(lexer, "LBRACE", "{");
+            add_token(lexer, LBRACE, "{");
             advance(lexer);
         } else if (lexer->current_char == '}') {
-            add_token(lexer, "RBRACE", "}");
+            add_token(lexer, RBRACE, "}");
             advance(lexer);
         } else if (lexer->current_char == '"') {
             //add_token(lexer, "QUOTE", "\"");
             //advance(lexer);
             Token str = string_lookahead(lexer);
             add_token(lexer, str.type, str.value);
-        } else if (lexer->current_char == '.') {
-            add_token(lexer, "DOT", ".");
-            advance(lexer);
         } else if (story_lookahead(lexer)) {
-            add_token(lexer, "STORY", "story");
+            add_token(lexer, STORY, "story");
             advance(lexer);
             advance(lexer);
             advance(lexer);
             advance(lexer);
             advance(lexer);
         } else if (room_lookahead(lexer)) {
-            add_token(lexer, "ROOM", "room");
+            add_token(lexer, ROOM, "room");
             advance(lexer);
             advance(lexer);
             advance(lexer);
             advance(lexer);
-        } else if (while_lookahead(lexer)) {
-            add_token(lexer, "WHILE", "while");
-            advance(lexer);
-            advance(lexer);
-            advance(lexer);
-            advance(lexer);
-            advance(lexer);
-        } else if (exits_lookahead(lexer)) {
-            add_token(lexer, "EXITS", "exits");
+        } 
+         else if (exits_lookahead(lexer)) {
+            add_token(lexer, EXITS, "exits");
             advance(lexer);
             advance(lexer);
             advance(lexer);
             advance(lexer);
             advance(lexer);
         } else if (END_lookahead(lexer)) {
-            add_token(lexer, "END", "END");
+            add_token(lexer, END, "END");
             advance(lexer);
             advance(lexer);
             advance(lexer);
-        } else if (notHas_lookahead(lexer)) {
-            add_token(lexer, "NOTHAS", "notHas");
+        } else if (items_lookahead(lexer)) {
+            add_token(lexer, ITEMS, "items");
             advance(lexer);
             advance(lexer);
             advance(lexer);
             advance(lexer);
             advance(lexer);
-            advance(lexer);
-        } else if (updateExits_lookahead(lexer)) {
-            add_token(lexer, "UPDATEEXITS", "updateExits");
-            advance(lexer);
-            advance(lexer);
-            advance(lexer);
+        }else if (startingItems_lookahead(lexer)) {
+            add_token(lexer, STARTINGITEMS, "startingItems");
             advance(lexer);
             advance(lexer);
             advance(lexer);
@@ -434,8 +849,6 @@ void run(LexerDFA *lexer) {
             advance(lexer);
             advance(lexer);
             advance(lexer);
-        }else if (input_lookahead(lexer)) {
-            add_token(lexer, "INPUT", "input");
             advance(lexer);
             advance(lexer);
             advance(lexer);
@@ -469,7 +882,7 @@ LexerDFA create_lexer(char *input_string) {
 
 void free_lexer(LexerDFA *lexer) {
     for (int i = 0; i < lexer->token_count; i++) {
-        if (strcmp(lexer->tokens[i].type, "IDENTIFIER") == 0) {
+        if (lexer->tokens[i].type == IDENTIFIER ) {
             // Only free dynamically allocated values for integer tokens
             free(lexer->tokens[i].value);
         }
@@ -479,8 +892,40 @@ void free_lexer(LexerDFA *lexer) {
 
 void print_tokens(LexerDFA *lexer) {
     for (int i = 0; i < lexer->token_count; i++) {
-        printf("<%s, %s>\n", lexer->tokens[i].type, lexer->tokens[i].value);
+        printf("<%s, %s> index: %d\n", toString(lexer->tokens[i].type), lexer->tokens[i].value, i);
     }
+}
+
+char *toString(enum TokenType t){
+    switch (t){
+
+    case ROOM:
+        return "ROOM";
+    
+    case STORY:
+        return "STORY";
+
+    case STRING:
+        return "STRING";
+
+
+    case IDENTIFIER:
+        return "IDENTIFIER";
+    
+    case LBRACE:
+        return "LBRACE";
+    case RBRACE:
+        return "RBRACE";
+    case EXITS:
+        return "EXITS"; 
+    case END:
+        return "END";
+    case ITEMS:
+        return "ITEMS";
+    case STARTINGITEMS:
+        return "STARTINGITEMS";
+    }
+
 }
 
 char *read_file(const char *filename) {
@@ -510,6 +955,7 @@ char *read_file(const char *filename) {
     return file_content;
 }
 
+
 int main(int argc, char **argv) {
     if (argc < 2) {
         fprintf(stderr, "Usage: %s <input_file>\n", argv[0]);
@@ -525,7 +971,24 @@ int main(int argc, char **argv) {
     run(&lexer);
 
     // Print tokens in the required format
-    print_tokens(&lexer);
+   // print_tokens(&lexer);
+
+                                                                                 //first index
+    struct Program_parse_result result = program_parse(lexer.tokens, lexer.token_count, 0);
+    if(result.result == SUCCESS){
+        print_Program(result.program);
+    }
+    else{ 
+        printf("Parsing failed. Follow preceding fail statements to track it down.\n");
+        /*
+       
+        possible errors:
+            1. did not see expected terminal symbol
+            2. not enough tokens to consume  
+            3. child call failed  
+            
+        */
+    }
 
     // Free allocated memory
     //free_lexer(&lexer);
@@ -533,3 +996,32 @@ int main(int argc, char **argv) {
 
     return 0;
 }
+
+
+
+/*
+int main() {
+    // Example usage of the print_RoomDeclarations function
+
+    // Creating exit options for a room
+    struct ExitOptions emptyExit = { EMPTY_OPTS};
+    struct ExitOptions exit1 = {NONEMPTY_OPTS, "Room2", &emptyExit};
+    struct ExitOptions exit2 = {NONEMPTY_OPTS, "Room3", &exit1};
+
+    // Creating room declarations
+    struct RoomDeclaration room1 = {"Room1", "This is the first room.", &exit2};
+    struct RoomDeclaration room2 = {"Room2", "This is the second room.", &emptyExit};
+
+    // Creating a list of room declarations
+    struct RoomDeclarations emptyDecl = {EMPTY_DECLS};
+    struct RoomDeclarations roomList2 = {NONEMPTY_DECLS, &room2, &emptyDecl};
+    struct RoomDeclarations roomList1 = {NONEMPTY_DECLS, &room1, &roomList2};
+
+    struct Program program = { &roomList1 };
+
+    // Call the print function
+    print_Program(&program);
+
+    return 0;
+}
+*/
