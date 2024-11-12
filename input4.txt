@@ -1,10 +1,5 @@
 ROOM roomA { 
   story "you are in the only room" 
-  exits { END }
+  items { itemA itemB }
+  exits {  }
 }
- 
-  		while exits notHas "END" {
-            input{selection}
-
-			updateExits{ Player.currentRoom "selection" }  
-        } 
