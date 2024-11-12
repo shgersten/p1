@@ -2,6 +2,8 @@ Scanner Assignment 2:
 
 UNI: srg2178
 
+Demo Link: https://youtu.be/nPv-uvyog6c
+
 Lexical Alphabet: [a-zA-Z0-9"{}]
 
 Grammar:
