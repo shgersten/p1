@@ -1,9 +1,14 @@
 ROOM roomA { 
-  story "you are in room A. You can enter room B or room C" 
+  story "you are in room A. You can enter room B" 
+  items { itemA itemB }
   exits { roomB  }
 }
 
+
 ROOM roomB { 
-  story "you are in room B. This is the end." 
-  exits { END }
+  story "you are in room B. You have finished the maze" 
+  items { itemC itemD }
+  exits { }
 }
+
+startingItems { itemD itemG }
