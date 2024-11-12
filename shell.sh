@@ -1,16 +1,16 @@
 #!/bin/bash
 
 # Compile the C program
-gcc -o scanner scan.c
+gcc -o scanner scann.c
 
 # Check if compilation was successful
 if [ $? -ne 0 ]; then
-  echo "Compilation failed. Please check your C program for errors."
+  echo "Compilation broke"
   exit 1
 fi
 
 # Array of input files
-input_files=("input1.txt" "input2.txt" "input3.txt" "input4.txt" "input5.txt")
+input_files=("input1.txt" "input2.txt" "input3.txt" "input4.txt" "input5.txt" )
 
 # Loop through each input file and execute the program
 for input_file in "${input_files[@]}"
