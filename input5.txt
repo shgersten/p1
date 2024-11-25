@@ -1,24 +1,30 @@
-ROOM roomA { 
-  story "you are in room A. You can enter room B or room C" 
-  items { itemA itemB }
- exits { roomB roomC }
+ROOM cell { 
+  story "Welcome to the Dungeon Maze Game! Find your way through the rooms collecting keys needed in order to escape. You have just woken up in a cell. You can exit the cell into the hallway" 
+  items {  }
+ exits { hallway }
 }
 
-ROOM roomB { 
-  story "you are in room B. You can go to room C." 
-  items { itemA itemB }
-  exits { roomC }
+ROOM hallway { 
+  story "You walk down the hallway and come across a gold key. There is a red door and a brown door at the end of the hallway. Which door do you choose?" 
+  items { goldKey }
+  exits { redDoor brownDoor cell}
 }
 
-ROOM roomC { 
-  story "you are in room C. You can enter room D."
-  items { itemA itemB }
-  exits { roomD }
+ROOM redDoor { 
+  story "You walk through the red door and find yourself in a closet that has a silverKey and a rope. You can go back into the hallway."
+  items { silverKey rope }
+  exits { hallway }
 }
   
- ROOM roomD { 
-  story "you are in room D. You have completed the maze!"
-  items { itemA itemB }
+ ROOM brownDoor { 
+  story "You walk through the brown door and see a locked window to the outside. You need two keys to unlock the window and a rope to climb down to freedom."
+  items { silverKey rope goldKey }
+  exits {  }
+} 
+
+ROOM unreferencedRoom { 
+  story "dead code so this will not generate"
+  items { this will not generate }
   exits {  }
 } 
 
