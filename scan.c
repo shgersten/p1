@@ -954,15 +954,258 @@ char *read_file(const char *filename) {
     fclose(file);
     return file_content;
 }
+/*int count_items(struct Items *items) {
+    int count = 0;
+    while (items != NULL && items->kind == NONEMPTY_ITEMS) {
+        count++;
+        items = items->rest;
+    }
+    return count;
+}*/
+
+void print_java(struct Program *program, const char *output_file) {
+    
+    FILE *file = fopen(output_file, "w");
+    if (file == NULL) {
+        fprintf(stderr, "Error: Could not open file %s for writing.\n", output_file);
+        exit(EXIT_FAILURE);
+    }
+
+    // Collect all used room IDs from ExitOptions
+    char *used_rooms[1000];
+    int used_count = 0;
+
+    struct RoomDeclarations *rooms_stored = program->roomDeclarations;
+    while (rooms_stored != NULL && rooms_stored->kind == NONEMPTY_DECLS) {
+        struct ExitOptions *current_exit = rooms_stored->first->exitOptions;
+        while (current_exit != NULL && current_exit->kind == NONEMPTY_OPTS) {
+            used_rooms[used_count++] = current_exit->firstRoomId;
+            current_exit = current_exit->rest;
+        }
+        rooms_stored = rooms_stored->rest;
+    }
+
+    //java imports
+    fprintf(file, "import java.util.Scanner;\n");
+    fprintf(file, "import java.util.HashSet;\n");
+    fprintf(file, "import java.util.Set;\n\n");
+    
+    /**************** GET THE NAME OF THE CLASS **************************/
+
+    
+    char class_name[256]; 
+    const char *base_name = strrchr(output_file, '/'); 
+    if (base_name == NULL) {
+        base_name = output_file;
+    } else {
+        base_name++; 
+    }
+
+    // Copy the file name without extension
+    strncpy(class_name, base_name, sizeof(class_name) - 1);
+    class_name[sizeof(class_name) - 1] = '\0';
+    char *dot = strrchr(class_name, '.');
+    if (dot != NULL) {
+        *dot = '\0'; // Remove the extension
+    }
+
+    /**********************************************/
+
+    fprintf(file, "public class %s {\n\n", class_name);
+
+    // Print room declarations
+    struct RoomDeclarations *roomDeclarations = program->roomDeclarations;
+    while (roomDeclarations != NULL && roomDeclarations->kind == NONEMPTY_DECLS) {
+        struct RoomDeclaration *room = roomDeclarations->first;
+        int is_used = 0;
+
+        //check if the specific room is used as an exit
+        for (int i = 0; i < used_count; i++) {
+            if (strcmp(used_rooms[i], room->roomId) == 0) {
+                is_used = 1;
+                break;
+            }
+        }
+
+        if(is_used){
+            fprintf(file, "\tpublic static void %s(Set<String> starting_items) {\n\n", room->roomId);
+            fprintf(file, "\t\tSystem.out.println(%s);\n", room->description);
+            // Add exit options
+            struct ExitOptions *current_exit = room->exitOptions;
+            int exit_count = 0;
+            char *exit_list[100];
+            while (current_exit != NULL && current_exit->kind == NONEMPTY_OPTS) {
+                if (exit_count < 100) {
+                    exit_list[exit_count++] = current_exit->firstRoomId;
+                }
+                current_exit = current_exit->rest;
+            }
+
+        /******** END OF MAZE: IF THERE ARE ITEMS, ADD THEM ***********************/
+
+        if(exit_count == 0){
+            fprintf(file, "\n");
+            
+            struct Items *current_item = room->items;
+             while (current_item != NULL && current_item->kind == NONEMPTY_ITEMS) {
+                fprintf(file, "\n\t\tSystem.out.println();");
+                // Start defining the keys set
+                fprintf(file, "\n\t\tSet<String> keys = Set.of(");
+                // Add items
+                int first = 1; // Flag to handle commas
+                while (current_item != NULL && current_item->kind == NONEMPTY_ITEMS) {
+                    if (!first) {
+                        fprintf(file, ", ");
+                    }
+                    fprintf(file, "\"%s\"", current_item->firstItemID);
+                    first = 0;
+                    current_item = current_item->rest;
+                }
+
+                // Close the Set.of definition
+                fprintf(file, ");\n");
+                current_item = current_item->rest;
+            }
+            // Check if starting_items contains all keys and print messages
+            fprintf(file, "\n\t\tif (starting_items.containsAll(keys)) {\n");
+            fprintf(file, "\t\t\tSystem.out.println(\"Congratulations! You have all the required items.\");\n");
+            fprintf(file, "\t\t\tSystem.out.println(\"Keys required: \" + keys);\n");
+
+            fprintf(file, "\t\t} else {\n");
+            fprintf(file, "\t\t\tSystem.out.println(\"Failed to Escape!\");\n");
+            fprintf(file, "\t\t\tSystem.out.println(\"You are missing some keys.\");\n");
+            fprintf(file, "\t\t\tSystem.out.println(\"Keys required: \" + keys);\n");
+            fprintf(file, "\t\t\tSystem.out.println(\"Your items: \" + starting_items);\n");
+            fprintf(file, "\t\t}\n");
+
+            fprintf(file, "\t\t\tSystem.out.println();\n");
+        }
+
+        /******** NOT END OF MAZE **************************/
+
+
+        /******* TAKE IN INPUT FOR EXIT ROOM *****************/
+
+        if(exit_count > 0){
+            fprintf(file, "\n\t\tScanner scanner = new Scanner(System.in);\n");
+            fprintf(file, "\t\tString input = scanner.nextLine();\n\n");
+
+            // Add items
+            struct Items *current_item = room->items;
+            while (current_item != NULL && current_item->kind == NONEMPTY_ITEMS) {
+                fprintf(file, "\t\tstarting_items.add(\"%s\");\n", current_item->firstItemID);
+                fprintf(file, "\n\t\tSystem.out.println();");
+                fprintf(file, "\n\t\tSystem.out.println(\"Acquired: %s\");\n", current_item->firstItemID);
+                current_item = current_item->rest;
+            }
+
+        
+
+            if (exit_count == 1) { //only one exit option
+                fprintf(file, "\n\t\twhile (!input.equals(\"%s\")) {\n", exit_list[0]);
+                fprintf(file, "\t\t\tSystem.out.println();\n");
+                fprintf(file, "\t\t\tSystem.out.println(\"Please choose the only available exit: %s\");\n", exit_list[0]);
+                fprintf(file, "\t\t\tSystem.out.println();\n");
+                fprintf(file, "\t\t\tinput = scanner.nextLine();\n");
+                fprintf(file, "\t\t\tSystem.out.println();\n");
+                fprintf(file, "\t\t}\n");
+
+                 // Print Current Items on one line enclosed in brackets
+                    fprintf(file, "\t\t\tSystem.out.println();\n");
+                    fprintf(file, "\t\tSystem.out.print(\"Current Items: [\");\n");
+                    fprintf(file, "\t\tint count = 0;\n");
+                    fprintf(file, "\t\tfor (String item : starting_items) {\n");
+                    fprintf(file, "\t\t\tif (count > 0) {\n");
+                    fprintf(file, "\t\t\t\tSystem.out.print(\", \");\n");
+                    fprintf(file, "\t\t\t}\n");
+                    fprintf(file, "\t\t\tSystem.out.print(item);\n");
+                    fprintf(file, "\t\t\tcount++;\n");
+                    fprintf(file, "\t\t}\n");
+                    fprintf(file, "\t\tSystem.out.println(\"]\");\n");
+                    fprintf(file, "\t\t\tSystem.out.println();\n");
+
+                fprintf(file, "\n\t\t%s(starting_items);\n", exit_list[0]);
+            } 
+            else if (exit_count > 1) { //more than one exit option
+                fprintf(file, "\n\t\twhile (");
+                for (int i = 0; i < exit_count; i++) {
+                    fprintf(file, "!input.equals(\"%s\")", exit_list[i]);
+                    if (i < exit_count - 1) {
+                        fprintf(file, " && ");
+                    }
+                }
+                fprintf(file, ") {\n");
+                fprintf(file, "\t\t\tSystem.out.println();\n");
+                fprintf(file, "\t\t\tSystem.out.println(\"Please choose one of the available exits: ");
+                for (int i = 0; i < exit_count; i++) {
+                    fprintf(file, "%s", exit_list[i]);
+                    if (i < exit_count - 1) {
+                        fprintf(file, ", ");
+                    }
+                }
+                fprintf(file, "\");\n");
+                fprintf(file, "\t\t\tSystem.out.println();\n");
+                fprintf(file, "\t\t\tinput = scanner.nextLine();\n");
+                fprintf(file, "\t\t}\n");
+
+                for (int i = 0; i < exit_count; i++) {
+                    fprintf(file, "\t\tif (input.equals(\"%s\")) {\n", exit_list[i]);
+                    // Print Current Items on one line enclosed in brackets
+                    fprintf(file, "\t\t\tSystem.out.println();\n");
+                    fprintf(file, "\t\tSystem.out.print(\"Current Items: [\");\n");
+                    fprintf(file, "\t\tint count = 0;\n");
+                    fprintf(file, "\t\tfor (String item : starting_items) {\n");
+                    fprintf(file, "\t\t\tif (count > 0) {\n");
+                    fprintf(file, "\t\t\t\tSystem.out.print(\", \");\n");
+                    fprintf(file, "\t\t\t}\n");
+                    fprintf(file, "\t\t\tSystem.out.print(item);\n");
+                    fprintf(file, "\t\t\tcount++;\n");
+                    fprintf(file, "\t\t}\n");
+                    fprintf(file, "\t\tSystem.out.println(\"]\");\n");
+                    fprintf(file, "\t\t\tSystem.out.println();\n");
+
+                    fprintf(file, "\t\t\t%s(starting_items);\n", exit_list[i]);
+                    fprintf(file, "\t\t\treturn;\n");
+                    fprintf(file, "\t\t}\n");
+                }
+            } 
+        }
+        fprintf(file, "\t}\n");
+        }
+        roomDeclarations = roomDeclarations->rest;
+    }
+
+    // Main function
+    fprintf(file, "\n\tpublic static void main(String[] args) {\n");
+    fprintf(file, "\n\t\tSet<String> starting_items = new HashSet<>();\n");
+
+    char *first_room_id = NULL;
+    if (program->roomDeclarations != NULL && program->roomDeclarations->kind == NONEMPTY_DECLS) {
+        first_room_id = program->roomDeclarations->first->roomId;
+    }
+
+    if (first_room_id != NULL) {
+        fprintf(file, "\t\t%s(starting_items);\n", first_room_id);
+    } else {
+        fprintf(file, "\t\tSystem.out.println(\"No rooms available.\");\n");
+    }
+
+    fprintf(file, "\t}\n");
+    fprintf(file, "}\n");
+
+    fclose(file);
+    
+}
 
 
 int main(int argc, char **argv) {
-    if (argc < 2) {
-        fprintf(stderr, "Usage: %s <input_file>\n", argv[0]);
+    if (argc < 3) {
+        fprintf(stderr, "Usage: %s <input_file> <output_file>\n", argv[0]);
         return EXIT_FAILURE;
     }
     const char *filename = argv[1];  // Input file containing the program to be tokenized
     char *input_expression = read_file(filename);
+    const char *output_file = argv[2];
 
     // Create lexer
     LexerDFA lexer = create_lexer(input_expression);
@@ -977,6 +1220,7 @@ int main(int argc, char **argv) {
     struct Program_parse_result result = program_parse(lexer.tokens, lexer.token_count, 0);
     if(result.result == SUCCESS){
         print_Program(result.program);
+        print_java(result.program, output_file);    
     }
     else{ 
         printf("Parsing failed. Follow preceding fail statements to track it down.\n");
@@ -990,6 +1234,7 @@ int main(int argc, char **argv) {
         */
     }
 
+
     // Free allocated memory
     //free_lexer(&lexer);
     free(input_expression);
@@ -998,30 +1243,3 @@ int main(int argc, char **argv) {
 }
 
 
-
-/*
-int main() {
-    // Example usage of the print_RoomDeclarations function
-
-    // Creating exit options for a room
-    struct ExitOptions emptyExit = { EMPTY_OPTS};
-    struct ExitOptions exit1 = {NONEMPTY_OPTS, "Room2", &emptyExit};
-    struct ExitOptions exit2 = {NONEMPTY_OPTS, "Room3", &exit1};
-
-    // Creating room declarations
-    struct RoomDeclaration room1 = {"Room1", "This is the first room.", &exit2};
-    struct RoomDeclaration room2 = {"Room2", "This is the second room.", &emptyExit};
-
-    // Creating a list of room declarations
-    struct RoomDeclarations emptyDecl = {EMPTY_DECLS};
-    struct RoomDeclarations roomList2 = {NONEMPTY_DECLS, &room2, &emptyDecl};
-    struct RoomDeclarations roomList1 = {NONEMPTY_DECLS, &room1, &roomList2};
-
-    struct Program program = { &roomList1 };
-
-    // Call the print function
-    print_Program(&program);
-
-    return 0;
-}
-*/
