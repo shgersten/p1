@@ -1,18 +1,61 @@
-ROOM roomA { 
-  story "you are in room A. You can enter room B" 
-  items { itemA itemB }
-  exits { roomB  }
+ROOM cell { 
+  story "Welcome to the Pirate Ship Maze Game! Traverse the rooms collecting items along the way and try to find your way out. You are in the brig. Your cell door has been left unlocked. You can open the door and enter the hallway." 
+  items {  }
+  exits { hallway  }
 }
 
-ROOM roomB { 
-  story "you are in room B. You can enter room E" 
-  items { itemC itemD }
-  exits { roomE  }
+ROOM hallway { 
+  story "You have entered the hallway. To your left is a staircase going up. On your right is a black door. Which one do you head towards?" 
+  items {  }
+  exits { staircase blackDoor cell }
 }
-ROOM roomE { 
-  story "you are in room E. You can enter room Z" 
-  items { itemC itemD }
-  exits {  roomZ }
+ROOM staircase { 
+  story "You head up the staircase and find yourself on the second level surrounded by sleeping pirates. You snatch a knife off a sleeping pirate. You can continue up the thirdFloor or head towards a green door at the end fo the room." 
+  items { Knife }
+  exits { greenDoor thirdFloor staircase  }
 }
 
-startingItems { itemD itemG }
+ROOM blackDoor { 
+  story "You go through the black door and find barrels of whiskey and biscuits. There is not much else in here. You should probably head back." 
+  items { Whiskey biscuits }
+  exits { hallway }
+}
+
+ROOM greenDoor { 
+  story "You go through the green door and find yourself in the laundry. You can pick up some sheets. There are no other exits here, you should head back." 
+  items { sheets }
+  exits { staircase }
+}
+
+ROOM thirdFloor { 
+  story "You go up to the thirdFloor of the ship. You see a yellow door, a blue door, and a white door. Choose." 
+  items { Whiskey biscuits }
+  exits { yellow blue white staircase }
+}
+ROOM yellow { 
+  story "You enter a private cabin. Not much here but books." 
+  items { books }
+  exits { thirdFloor }
+}
+ROOM blue { 
+  story "You enter a private cabin. Nothing here, but out the window you can see a small tugboat attached to the ship." 
+  items {  }
+  exits { thirdFloor }
+}
+ROOM white { 
+  story "You have entered the top deck of the ship. It looks like a tugboat is on your right tied to the ship. It looks like you might need some sheets to form a sail too and food for your journey. On your left are a bunch of closed chests. Head to the chests or the tugboat?" 
+  items {  }
+  exits { chests tugboat thirdFloor }
+}
+ROOM chests { 
+  story "You open the chests and they're filled with fresh water. You should take one." 
+  items { freshWater }
+  exits { tugboat white }
+}
+ROOM tugboat { 
+  story "In order to escape in the tugboat you need supplies for your journey, a sheet for a sail, and a knife to cut the boat free." 
+  items { freshWater Whiskey biscuits sheets Knife}
+  exits { }
+}
+
+startingItems { itemD }
