@@ -4,9 +4,13 @@ ROOM roomA {
   exits { roomB  }
 }
 
-
 ROOM roomB { 
-  story "you are in room B. You have finished the maze" 
+  story "you are in room B. You can enter roomC or go back to roomA" 
+  items { itemC itemD }
+  exits { roomC roomA }
+}
+ROOM roomC { 
+  story "you completed the maze" 
   items { itemC itemD }
   exits { }
 }
