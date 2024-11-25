@@ -1,7 +1,10 @@
-ROOM roomA { 
-  story "you are in the only room" 
-  exits {  }
+ROOM roomC { 
+  story "you completed the maze" 
+  items { unexpectedChar --!!kh }
+  exits { }
 }
+
+startingItems { itemD itemG }
  
 
 
